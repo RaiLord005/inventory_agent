@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Warehouse Agent Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; margin: 40px; background: #f0f2f5; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-right: 10px; }
+        .btn-blue { background: #007bff; color: white; }
+        .btn-green { background: #28a745; color: white; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
+        .advice-box { background: #fff3cd; border: 1px solid #ffeeba; padding: 15px; margin: 10px 0; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>Inventory Management Agent</h1>
+    
+    <div style="margin-bottom: 20px;">
+        <button class="btn btn-blue" onclick="loadInventory()">Show All Inventory</button>
+        <button class="btn btn-green" onclick="loadAdvice()">Get Agent Advice</button>
+    </div>
+
+    <div id="advice-output"></div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Stock</th>
+                <th>Safety Level</th>
+                <th>forecasted demand</th>
+                <th>lead_time_days</th>
+                <th>annual_demand</th>
+                <th>order_cost_fixed</th>
+                <th>holding_cost_per_unit</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody id="inventory-body"></tbody>
+    </table>
+</div>
+
+<script>
+    async function loadInventory() {
+        console.log("Fetching inventory list...");
+        const response = await fetch('/api/inventory');
+        const data = await response.json();
+        
+        const tbody = document.getElementById('inventory-body');
+        tbody.innerHTML = '';
+
+        data.forEach(item => {
+            // 1. Define your thresholds
+            const isLow = item.current_stock <= item.safety_stock_level;
+            const isMed = item.current_stock > item.safety_stock_level && item.current_stock <= item.forecasted_demand;
+            
+            // 2. Determine Color and Label
+            let statusColor = "green";
+            let statusText = "✅ OK";
+
+            if (isLow) {
+                statusColor = "red";
+                statusText = "❌ CRITICAL LOW";
+            } else if (isMed) {
+                statusColor = "orange"; // Orange is better for 'Medium/Warning'
+                statusText = "⚠️ WARNING";
+            }
+            // 3. Append to table
+        tbody.innerHTML += `
+            <tr>
+                <td>${item.product_name}</td>
+                <td>${item.current_stock}</td>
+                <td>${item.safety_stock_level}</td>
+                <td>${item.forecasted_demand}</td>
+                <td>${item.lead_time_days}</td>
+                <td>${item.annual_demand}</td>
+                <td>${item.order_cost_fixed}</td>
+                <td>${item.holding_cost_per_unit}</td>
+                <td style="color: ${statusColor}; font-weight: bold;">${statusText}</td>
+            </tr>`;
+        });
+    }
+
+    async function loadAdvice() {
+        console.log("Requesting agent advice...");
+        const response = await fetch('/api/advise');
+        const data = await response.json();
+        
+        const output = document.getElementById('advice-output');
+        output.innerHTML = '<h3>Agent Recommendations:</h3>';
+
+        if (!Array.isArray(data) || data.length === 0) {
+            output.innerHTML += '<p>No items need reordering right now.</p>';
+            return;
+        }
+
+        data.forEach(item => {
+            output.innerHTML += `
+                <div class="advice-box">
+                    <strong>${item.product}:</strong> Current stock is ${item.current}. 
+                    Recommendation: <b>${item.recommendation}</b>
+                </div>`;
+        });
+    }
+</script>
+
+</body>
+</html>
