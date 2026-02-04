@@ -9,9 +9,9 @@ def get_connection():
     try:
         connection = mysql.connector.connect(
             host='localhost',
-            user='root',         # Your MySQL username
-            password='Railord@2005', # Your MySQL password
-            database='WarehouseDB'
+            user='',         # Your MySQL username
+            password='', # Your MySQL password
+            database=''
         )
         if connection.is_connected():
             return connection
